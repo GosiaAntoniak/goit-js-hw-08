@@ -2,25 +2,35 @@ import _throttle from 'lodash.throttle';
 import * as storage from './storage';
 
 const form = document.querySelector('.feedback-form');
+const submitButton = form.querySelector('#submit');
 const LOCALSTORAGE_KEY = 'feedback-form-state';
-
-form.addEventListener('input', _throttle(saveMessage, 500));
+const parsedInput = storage.default.load(LOCALSTORAGE_KEY);
+const INPUT_EMPTY_VALUE = '';
 
 function saveMessage() {
-  const {
-    elements: { email, message },
-  } = form;
-  const feedback = {
-    email: email.value,
-    message: message.value,
-  };
-  console.log(feedback);
+  const feedback = getFormValues();
+  disableSubmitWhenEmptyValue(feedback);
   storage.default.save(LOCALSTORAGE_KEY, feedback);
 }
 
-const parsedInput = storage.default.load(LOCALSTORAGE_KEY);
+function getFormValues() {
+  const {
+    elements: { email, message },
+  } = form;
+  return {
+    email: email.value,
+    message: message.value,
+  };
+}
 
-window.addEventListener('load', checkStorage);
+function disableSubmitWhenEmptyValue(feedback) {
+  const isAnyValueEmpty = Object.values(feedback).some((value) => value === INPUT_EMPTY_VALUE);
+  if (isAnyValueEmpty) {
+    submitButton.setAttribute('disabled', 'true');
+  } else {
+    submitButton.removeAttribute('disabled');
+  }
+}
 
 function checkStorage() {
   const {
@@ -30,12 +40,11 @@ function checkStorage() {
     email.value = parsedInput.email;
     message.value = parsedInput.message;
   } else {
-    email.value = ' ';
-    message.value = ' ';
+    email.value = INPUT_EMPTY_VALUE;
+    message.value = INPUT_EMPTY_VALUE;
   }
+  disableSubmitWhenEmptyValue(getFormValues());
 }
-
-form.addEventListener('submit', afterSubmit);
 
 function afterSubmit(event) {
   event.preventDefault();
@@ -49,3 +58,8 @@ function afterSubmit(event) {
   form.reset();
   storage.default.remove(LOCALSTORAGE_KEY);
 }
+
+form.addEventListener('input', _throttle(saveMessage, 500));
+form.addEventListener('submit', afterSubmit);
+
+window.addEventListener('load', () => checkStorage());
